@@ -1,6 +1,6 @@
 ---
 title: "ANNOVA and Regression"
-author: "Group 5"
+author: "Eyob_Mulugeta"
 date: "`r Sys.Date()`"
 output:
   word_document: default
