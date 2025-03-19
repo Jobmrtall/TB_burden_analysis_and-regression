@@ -1,0 +1,363 @@
+title: "GROUP 5 TB DATA CLEANING, DESCRIPTIVE SATISTICS, CORRELATION"
+author: 'group 5 '
+date:8/1/2025
+
+Introduction
+This R Markdown document performs data cleaning and exploratory analysis on the TB dataset using Python. It includes loading the dataset, basic exploration, visualization, and data preprocessing.
+
+Load Dataset and Basic Exploration
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load dataset
+tb = pd.read_csv('https://raw.githubusercontent.com/Jobmrtall/MSD/refs/heads/main/TB.csv')
+
+# Display basic dataset information
+print(tb.shape)  # Print dataset dimensions (rows, columns)
+print(tb.isna().sum())  # Count missing values in each column
+tb.info()  # Summary of dataset structure
+
+# Display the frequency of country occurrences and regional distribution
+print(tb.value_counts('Country or territory name'))
+print(tb['Region'].value_counts())
+```
+
+Data Visualization
+This section generates boxplots and line plots to understand population distribution and TB prevalence trends.
+```{python}
+# Boxplot of population distribution by region
+sns.boxplot(x='Region', y='Estimated total population number', data=tb)
+plt.xticks(rotation=90)  # Rotate x-axis labels for readability
+plt.show()
+
+
+```
+
+Data Cleaning and Imputation
+This section removes columns with excessive missing data, imputes categorical and numerical missing values, and converts the Year column into the appropriate format.
+```{python}
+import warnings
+warnings.filterwarnings('ignore')
+# Drop columns with more than 50% missing values
+tb.dropna(axis=1, thresh=len(tb) * 0.5, inplace=True)
+
+# Drop rows with less than 5% missing values
+to_drop = tb.columns[tb.isna().sum() <= len(tb) * 0.05]
+tb = tb.dropna(subset=to_drop)
+
+# Convert Year to datetime format
+tb['Year'] = pd.to_datetime(tb['Year'], format='%Y').dt.year
+```
+
+Imputation of Missing Value
+Categorical missing values are filled using mode, and numerical missing values are imputed using the median.
+```{python}
+# Separate categorical and numerical columns
+cat_cols = tb.select_dtypes(include=['object']).columns
+num_cols = tb.select_dtypes(include=['float64']).columns
+
+# Impute categorical columns using mode
+t = tb[['Year', 'Country or territory name', 'ISO 2-character country/territory code',
+        'ISO 3-character country/territory code', 'Region',
+        'Method to derive prevalence estimates', 'Method to derive mortality estimates',
+        'Method to derive incidence estimates']]
+t = t.fillna('unknown')
+mode_df = t.groupby(['Region', 'Year'])['Method to derive incidence estimates'].agg(pd.Series.mode).reset_index()
+
+# Convert mode values to a dictionary
+mode_dict = mode_df.set_index(['Region', 'Year'])['Method to derive incidence estimates'].to_dict()
+
+def impute_mode(row):
+    if pd.isna(row['Method to derive incidence estimates']):
+        return mode_dict.get((row['Region'], row['Year']), row['Method to derive incidence estimates'])
+    return row['Method to derive incidence estimates']
+
+# Apply mode imputation
+tb['Method to derive incidence estimates'] = tb.apply(impute_mode, axis=1)
+
+# Function to impute numerical columns using median
+def impute_median(df, col):
+    median_dict = df.groupby(['Region', 'Year'])[col].median().to_dict()
+    df[col] = df.apply(lambda row: median_dict.get((row['Region'], row['Year']), row[col]) if pd.isna(row[col]) else row[col], axis=1)
+
+# Apply median imputation for numerical columns
+for col in num_cols:
+    impute_median(tb, col)
+tb.head()
+```
+
+acessing the cleaned imputed data, then renaming the name of columns to more clear short and precise name 
+```{python}
+tb=pd.read_csv('https://raw.githubusercontent.com/Jobmrtall/MSD/refs/heads/main/tb_cleand.csv')
+rename_dict = {
+    "Country or territory name": "Country",
+    "ISO 2-character country/territory code": "ISO2",
+    "ISO 3-character country/territory code": "ISO3",
+    "ISO numeric country/territory code": "ISONum",
+    "Region": "Region",
+    "Year": "Year",
+    "Estimated total population number": "Pop",
+    "Estimated prevalence of TB (all forms) per 100 000 population": "TB_Prev_100k",
+    "Estimated prevalence of TB (all forms) per 100 000 population, low bound": "TB_Prev_LB",
+    "Estimated prevalence of TB (all forms) per 100 000 population, high bound": "TB_Prev_HB",
+    "Estimated prevalence of TB (all forms)": "TB_Prev",
+    "Estimated prevalence of TB (all forms), low bound": "TB_Prev_L",
+    "Estimated prevalence of TB (all forms), high bound": "TB_Prev_H",
+    "Method to derive prevalence estimates": "Prev_Method",
+    "Estimated mortality of TB cases (all forms, excluding HIV) per 100 000 population": "TB_Mort_100k",
+    "Estimated mortality of TB cases (all forms, excluding HIV), per 100 000 population, low bound": "TB_Mort_100k_LB",
+    "Estimated mortality of TB cases (all forms, excluding HIV), per 100 000 population, high bound": "TB_Mort_100k_HB",
+    "Estimated number of deaths from TB (all forms, excluding HIV)": "TB_Deaths",
+    "Estimated number of deaths from TB (all forms, excluding HIV), low bound": "TB_Deaths_LB",
+    "Estimated number of deaths from TB (all forms, excluding HIV), high bound": "TB_Deaths_HB",
+    "Estimated mortality of TB cases who are HIV-positive, per 100 000 population": "TB_HIV_Mort_100k",
+    "Estimated mortality of TB cases who are HIV-positive, per 100 000 population, low bound": "TB_HIV_Mort_100k_LB",
+    "Estimated mortality of TB cases who are HIV-positive, per 100 000 population, high bound": "TB_HIV_Mort_100k_HB",
+    "Estimated number of deaths from TB in people who are HIV-positive": "TB_HIV_Deaths",
+    "Estimated number of deaths from TB in people who are HIV-positive, low bound": "TB_HIV_Deaths_LB",
+    "Estimated number of deaths from TB in people who are HIV-positive, high bound": "TB_HIV_Deaths_HB",
+    "Method to derive mortality estimates": "Mort_Method",
+    "Estimated incidence (all forms) per 100 000 population": "TB_Inc_100k",
+    "Estimated incidence (all forms) per 100 000 population, low bound": "TB_Inc_LB",
+    "Estimated incidence (all forms) per 100 000 population, high bound": "TB_Inc_HB",
+    "Estimated number of incident cases (all forms)": "TB_Cases",
+    "Estimated number of incident cases (all forms), low bound": "TB_Cases_LB",
+    "Estimated number of incident cases (all forms), high bound": "TB_Cases_HB",
+    "Method to derive incidence estimates": "Inc_Method",
+    "Estimated HIV in incident TB (percent)": "TB_HIV_Perc",
+    "Estimated HIV in incident TB (percent), low bound": "TB_HIV_Perc_LB",
+    "Estimated HIV in incident TB (percent), high bound": "TB_HIV_Perc_HB",
+    "Estimated incidence of TB cases who are HIV-positive per 100 000 population": "TB_HIV_Inc_100k",
+    "Estimated incidence of TB cases who are HIV-positive per 100 000 population, low bound": "TB_HIV_Inc_100k_LB",
+    "Estimated incidence of TB cases who are HIV-positive per 100 000 population, high bound": "TB_HIV_Inc_100k_HB",
+    "Estimated incidence of TB cases who are HIV-positive": "TB_HIV_Cases",
+    "Estimated incidence of TB cases who are HIV-positive, low bound": "TB_HIV_Cases_LB",
+    "Estimated incidence of TB cases who are HIV-positive, high bound": "TB_HIV_Cases_HB",
+    "Case detection rate (all forms), percent": "Case_Detect",
+    "Case detection rate (all forms), percent, low bound": "Case_Detect_LB",
+    "Case detection rate (all forms), percent, high bound": "Case_Detect_HB"
+}
+
+# Apply renaming
+tb.rename(columns=rename_dict, inplace=True)
+```
+
+Description: visualizing the distribution of each column with float data type to examine the outliers
+
+```{python}
+tf = tb.select_dtypes(include=['float64']).columns
+
+# Reshape data to long format for FacetGrid
+tb_melted = tb.melt(value_vars=tf, var_name='Feature', value_name='Value')
+
+# Create the FacetGrid
+g = sns.FacetGrid(tb_melted, col='Feature', col_wrap=3, sharex=False, sharey=False)
+g.map(sns.boxplot, 'Value')
+
+# Adjust layout
+plt.xticks(rotation=45)
+plt.show()
+```
+
+Description: by calculating the interquantile range we obtained the lower and upper bound. Then we kept replacing values that goes surppaising the bounds in either ways by the value of upper and lower bounds accordingly.this is done to prevent creation of na values which could have happen if we were to remove the outliers for every specfic feature. As a row having an outlier in some feature would have a value within the interquartile range in another.
+Sp we used the clip method
+```{python}
+# Compute IQR-based lower and upper bounds
+Q1 = tb[tf].quantile(0.25)
+Q3 = tb[tf].quantile(0.75)
+IQR = Q3 - Q1
+
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+
+# Clip values to IQR range
+tb[tf] = tb[tf].clip(lower=lower_bound, upper=upper_bound, axis=1)
+
+
+tb.isna().sum()
+```
+
+visualizing the data after managing the outliers
+
+```{python}
+tf = tb.select_dtypes(include=['float64']).columns
+
+# Reshape data to long format for FacetGrid
+tb_melted = tb.melt(value_vars=tf, var_name='Feature', value_name='Value')
+
+# Create the FacetGrid
+g = sns.FacetGrid(tb_melted, col='Feature', col_wrap=3, sharex=False, sharey=False)
+g.map(sns.boxplot, 'Value')
+
+# Adjust layout
+plt.xticks(rotation=45)
+plt.show()
+```
+DESCRIPTIVE STATISTICS OF TB DATA SET
+The descriptive statistics were done for specfic grouos of the data set which were grouped by means of
+1 region
+2 countries
+3 year
+4 year and region
+
+```{python}
+tb_r=tb.groupby(['Region']).describe(include=[float])
+print(tb_r.head())
+tb_c=tb.groupby('Country').describe(include=[float])
+print(tb_c.head())
+tb_y=tb.groupby('Year').describe(include=['float'])
+print(tb_y.head())
+tb_r_y=tb.groupby(['Year','Region']).describe(include=[float])
+print(tb_r_y.head())
+
+```
+
+CORRELATION
+To do the correlation we filterd a data set containg only the cloumns with the numeric values.
+Additionally we dropped the columns of lower and upper bounds of the a specfic attribute using only the center or actual value for correlating.
+
+
+
+```{python}
+tb_num=tb.select_dtypes(['int64','float64'])
+tb_num_fltr=tb_num[['ISONum', 'Year', 'Pop', 'TB_Prev_100k', 'TB_Prev', 'TB_Mort_100k',
+    'TB_Deaths', 'TB_HIV_Mort_100k', 'TB_HIV_Deaths', 'TB_Inc_100k',
+    'TB_Cases', 'TB_HIV_Perc', 'TB_HIV_Inc_100k', 'TB_HIV_Cases', 'Case_Detect']]
+corr=tb_num_fltr.corr()
+corr
+```
+
+visualizing the correlation by means of heatmap
+```{python}
+plt.figure(figsize=(30, 30))  # Set figure size
+sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)  # Heatmap
+plt.title("Correlation Matrix")  # Add title
+plt.show()
+```
+ sorting the correlation values pulling out rank of correlaation only on there magnitude no sign used in this section
+ 
+```{python}
+corr = tb_num_fltr.corr()
+
+# Convert correlation matrix to a long format (stacked form)
+corr_pairs = corr.unstack()
+
+# Remove self-correlations (correlation of a variable with itself is always 1)
+corr_pairs = corr_pairs[corr_pairs < 1].drop_duplicates()
+
+# Sort correlations from highest to lowest
+sorted_corr_mag = corr_pairs.abs().sort_values(ascending=False)
+
+sorted_corr_mag
+```
+ based on the there signs now its ranked 
+```{python}
+sorted_corr_sign = corr_pairs.sort_values(ascending=False)
+sorted_corr_sign
+```
+ filtering out those with high correlation
+ as high was defined for those scoring above 0.8
+```{python}
+high_corr=sorted_corr_sign[sorted_corr_sign>0.8]
+high_corr
+```
+DESCRIPTION ON HIGHLY CORRELATED FEATURES
+ The following correlations indicate strong positive relationships between tuberculosis-related variables.
+
+1. TB Prevalence vs. TB Cases (0.98)
+
+Meaning: Nearly a perfect correlation. The total number of TB cases strongly determines the overall prevalence.
+
+Implication: TB control efforts must focus on reducing new cases to bring down prevalence.
+
+
+2. TB Prevalence per 100k vs. TB Incidence per 100k (0.96)
+
+Meaning: Countries with a high TB burden also experience high rates of new infections.
+
+Implication: To reduce TB prevalence, new infections must be prevented through better screening and treatment.
+
+
+3. TB Prevalence vs. TB Deaths (0.95)
+
+Meaning: More TB cases lead to higher mortality.
+
+Implication: Countries with high TB prevalence need better healthcare infrastructure to lower TB-related deaths.
+
+
+4. TB-HIV Deaths vs. TB-HIV Cases (0.95)
+
+Meaning: The number of HIV-positive TB cases strongly predicts the number of deaths.
+
+Implication: HIV patients with TB need early treatment to prevent mortality.
+
+
+5. TB-HIV Mortality per 100k vs. TB-HIV Incidence per 100k (0.93)
+
+Meaning: High TB-HIV incidence rates lead to more TB-HIV deaths.
+
+Implication: Integrated TB and HIV treatment is crucial to reducing fatalities.
+
+
+6. TB Deaths vs. TB Cases (0.93)
+
+Meaning: Higher TB case numbers are linked to more deaths.
+
+Implication: Early detection and treatment programs can significantly reduce TB mortality.
+
+
+7. TB Prevalence per 100k vs. TB Mortality per 100k (0.91)
+
+Meaning: Countries with high TB prevalence also have high mortality rates.
+
+Implication: This correlation highlights the need for stronger TB treatment and prevention strategies.
+
+
+8. TB Mortality per 100k vs. TB Incidence per 100k (0.87)
+
+Meaning: Countries with high TB incidence often have high mortality rates.
+
+Implication: This suggests a need for better case management and access to treatment.
+
+
+9. TB-HIV Mortality per 100k vs. TB-HIV Deaths (0.84)
+
+Meaning: More TB-HIV deaths increase the overall TB-HIV mortality rate.
+
+Implication: Strengthening TB-HIV co-treatment programs is critical.
+
+
+10. TB-HIV Percentage vs. TB-HIV Incidence per 100k (0.83)
+
+Meaning: Higher HIV-TB incidence leads to a higher percentage of TB cases being HIV-positive.
+
+Implication: Countries with high TB-HIV burden should prioritize ART (antiretroviral therapy) and TB prevention.
+
+
+11. TB-HIV Incidence per 100k vs. TB-HIV Cases (0.82)
+
+Meaning: More HIV-positive TB cases indicate a higher incidence rate.
+
+Implication: This supports the need for improved HIV testing among TB patients.
+
+---
+
+Key Takeaways
+
+TB Prevalence is closely tied to new cases, deaths, and mortality.
+
+HIV-associated TB significantly increases TB mortality rates.
+
+Reducing TB incidence is critical for lowering overall TB burden and deaths.
+
+Integrated TB-HIV programs are necessary to address co-infection risks.
+
+
+VISUALIZING PAIRPLOTS OF CORRELATIONS.
+```{python}
+sns.pairplot(data=tb_num_fltr,vars=["TB_Prev", "TB_Cases", "TB_Prev_100k", "TB_Inc_100k", "TB_Deaths","TB_HIV_Deaths", "TB_HIV_Cases", "TB_HIV_Mort_100k", "TB_HIV_Inc_100k","TB_Mort_100k", "TB_HIV_Perc"])
+plt.show()
+```
+ 

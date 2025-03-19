@@ -1,0 +1,102 @@
+---
+title: "ANNOVA and Regression"
+author: "Group 5"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  word document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+tb=read.csv('https://raw.githubusercontent.com/Jobmrtall/MSD/refs/heads/main/tb_renamed.csv')
+```
+
+## One-Way ANOVA
+
+We perform an ANOVA test to determine if the mean TB prevalence differs across regions.
+
+```{r anova}
+# Perform one-way ANOVA
+aov_model <- aov(TB_Prev_100k ~ Region, data = tb)
+
+# Display ANOVA summary
+summary(aov_model)
+```
+
+## Assumption Checks for ANOVA
+
+### 1. Normality of Residuals
+
+We check if the residuals follow a normal distribution using the Shapiro-Wilk test and a Q-Q plot.
+
+```{r normality}
+# Check sample size and choose appropriate normality test
+res <- residuals(aov_model)
+
+if (length(res) >= 3 & length(res) <= 5000) {
+  shapiro.test(res)  # Shapiro-Wilk test
+} else if (length(res) > 5000) {
+  library(nortest)
+  ad.test(res)  # Anderson-Darling test for large datasets
+} else {
+  print("Sample size too small for normality test.")
+}
+
+```
+
+The Shapiro-Wilk test helps determine if the residuals are normally distributed. A p-value greater than 0.05 suggests normality.
+
+```{r qqplot}
+# Q-Q plot for residuals
+qqnorm(residuals(aov_model))
+qqline(residuals(aov_model), col = "red")
+```
+
+A Q-Q plot is used to visually assess normality. If the points lie along the red reference line, normality is assumed.
+
+### 2. Homogeneity of Variances
+
+We use Levene’s test to check if the variance across groups is equal.
+
+```{r homogeneity}
+library(car)  # Load the 'car' package for Levene's test
+leveneTest(TB_Prev_100k ~ Region, data = tb)
+```
+
+Levene’s test assesses the equality of variances. A p-value greater than 0.05 indicates homogeneity of variance.
+
+### 3. Residuals vs. Fitted Values Plot
+
+We plot the residuals against fitted values to check for homoscedasticity.
+
+```{r residuals_plot}
+plot(aov_model, which = 1)
+```
+
+This plot helps assess whether residuals are randomly scattered around zero, which is an assumption of ANOVA.
+
+## Multiple Linear Regression
+
+We perform a multiple linear regression to predict TB prevalence based on multiple independent variables.
+
+```{r regression}
+# Multiple linear regression model
+multi_model <- lm(
+  TB_Prev_100k ~ Year + Region + TB_Inc_100k + 
+    TB_HIV_Inc_100k + TB_Mort_100k,
+  data = tb
+)
+```
+
+The linear model includes predictors such as Year, Region, TB Incidence, HIV percentage in incident TB cases, and TB Mortality to predict TB prevalence.
+
+```{r regression_summary}
+# Display summary of the regression model
+summary(multi_model)
+```
+
+The summary provides estimates, standard errors, t-values, p-values, and R-squared values to evaluate model performance.
