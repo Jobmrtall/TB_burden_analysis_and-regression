@@ -1,5 +1,5 @@
-title: "GROUP 5 TB DATA CLEANING, DESCRIPTIVE SATISTICS, CORRELATION"
-author: 'group 5 '
+title: "TB DATA CLEANING, DESCRIPTIVE SATISTICS, CORRELATION"
+author: 'Eyob_Mulugeta'
 date:8/1/2025
 
 Introduction
